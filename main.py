@@ -28,15 +28,13 @@ class Data:
 
 
 class AD:
-    def __init__(self, avito_id, vc_name, title, description, rating, comments_count, number, last_update, price):
+    def __init__(self, avito_id, vc_name, title, description, rating, comments_count, price):
         self.avito_id = avito_id
         self.vc_name = vc_name
         self.title = title
         self.description = description
         self.rating = rating
         self.comments_count = comments_count
-        self.number = number
-        self.last_update = last_update
         self.price = price
 
 
@@ -45,8 +43,8 @@ class AvitoParser:
         self.driver = self._create_driver_with_options()
         self.db = DB.DataBase()
         self.db.connect()
-        self.db.add_price_column()
-        self.today_date = self.db.price_today
+
+
 
     @staticmethod
     def _create_driver_with_options():
@@ -78,15 +76,6 @@ class AvitoParser:
             record = self._get_all_info_from_ad(ad, card, i)
             if not (record is None):
                 self.db.add(record)
-            else:
-                self._update_info_if_needed(ad, i)
-
-    def _update_info_if_needed(self, ad, i):
-        avito_id = ad.get_attribute('id')
-        last_update = self.db.get_last_update(avito_id)
-        if last_update != self.today_date:
-            price = self._get_price(ad)
-            self.db.update_price(avito_id=avito_id, price=price)
 
     def _get_all_info_from_ad(self, ad, card, i):
         avito_id = ad.get_attribute('id')
@@ -101,17 +90,14 @@ class AvitoParser:
 
         rating = self._get_rating(ad)
         comments_count = self._get_comments(ad)
-        number = self._get_phone_from(ad, i)
         price = self._get_price(ad)
 
         ad = AD(avito_id=avito_id,
-                title=title,
                 vc_name=vc_name,
+                title=title,
                 description=description,
                 rating=rating,
                 comments_count=comments_count,
-                number=number,
-                last_update=self.today_date,
                 price=price)
 
         return ad
@@ -156,36 +142,6 @@ class AvitoParser:
         except Exception as ex:
             print("\nЦена не найдена\n")
         return price
-
-    def _get_phone_from(self, ad, i):
-        number = "Нет"
-        try:
-            self._open_phone_button(ad)
-            number = self._get_photo_and_analise(ad, i)
-        except Exception as ex:
-            print("#" * 20 + "\nНет номера" + "\n" + "#" * 20)
-
-        return number
-
-
-    def _get_photo_and_analise(self, ad, i):
-        with open(r'Phone_numbers/' + f'{i}.png', 'wb') as file:
-            time.sleep(1)
-            png = ad.find_element(By.CLASS_NAME, "button-phone-image-LkzoU").screenshot_as_png
-            time.sleep(1)
-            file.write(png)
-
-        phone = pytesseract.image_to_string(Image.open(f'Phone_numbers/{i}.png'))
-        return phone
-
-    def _open_phone_button(self, ad):
-        action = ActionChains(self.driver)
-        action.move_to_element(ad).perform()
-
-        phone_button = ad.find_element(By.CLASS_NAME, Data.PHONE_BUTTON)
-        time.sleep(1)
-        phone_button.click()
-        time.sleep(2)
 
 
 def main():
