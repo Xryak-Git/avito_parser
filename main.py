@@ -16,7 +16,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 class Data:
     VIDEOCARDS = "https://www.avito.ru/moskva/tovary_dlya_kompyutera/komplektuyuschie/videokarty-ASgBAgICAkTGB~pm7gmmZw?cd=1&q="
     AVITO = "https://www.avito.ru/"
-    VC = ['rtx 3050', 'rx 6600', 'rtx 3070', 'rtx 3060']
+    VC = ['rtx 3050', 'rx 6600', 'rtx 3070', 'rtx 3060', 'gtx 1050 ti', 'rtx 3080', 'rtx 3090']
     AD_CLASS_NAME = 'iva-item-list-rfgcH'
     PHONE_BUTTON = 'button-button-eBrUW'
     PHONE_IMAGE = "button-phone-image-LkzoU"
@@ -25,6 +25,8 @@ class Data:
     RATING = '//span[@class="desktop-1lslbsi"]'
     COMMENTS = 'desktop-1c71z48'
     PRICE = 'price-text-_YGDY'
+
+    PAGE_COUNT = 10
 
 
 class AD:
@@ -63,11 +65,13 @@ class AvitoParser:
 
     def parce_avito(self):
         for card in Data.VC:
-            page = f'{Data.VIDEOCARDS}{card.replace(" ", "+")}'
-            self.driver.get(page)
-            ads = self.driver.find_elements(By.CLASS_NAME, Data.AD_CLASS_NAME)
+            for page in range(1, Data.PAGE_COUNT + 1):
 
-            self._ad_sort(ads, card)
+                link = f'{Data.VIDEOCARDS}{card.replace(" ", "+")}&p={page}'
+                self.driver.get(link)
+                ads = self.driver.find_elements(By.CLASS_NAME, Data.AD_CLASS_NAME)
+
+                self._ad_sort(ads, card)
 
         self.db.close_connection()
 
@@ -86,8 +90,8 @@ class AvitoParser:
         title = ad.find_element(By.CLASS_NAME, Data.TITLE).text
         print(title)
         vc_name = card
-        description = ad.find_element(By.CLASS_NAME, Data.DESCRIPTION).text
 
+        description = self._get_description(ad)
         rating = self._get_rating(ad)
         comments_count = self._get_comments(ad)
         price = self._get_price(ad)
@@ -108,6 +112,15 @@ class AvitoParser:
             return False
         else:
             return True
+
+    def _get_description(self, ad):
+        description = "Нет"
+        try:
+            description = ad.find_element(By.CLASS_NAME, Data.DESCRIPTION).text
+        except Exception as ex:
+            print(ex)
+
+        return description
 
     def _get_rating(self, ad):
         rating = 0
